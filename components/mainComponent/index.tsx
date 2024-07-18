@@ -1,31 +1,40 @@
 import Link from 'next/link'
-
+import { Button, Spin } from 'antd';
+import { useAccount } from 'wagmi';
+import { useState, useEffect } from 'react';
 export default function MainComponent() {
+
+  const [isClient, setIsClient] = useState(false)
+  const account = useAccount()
+
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
+
   return (
     <div className="mx-auto w-1/2 text-center">
-      <div className="mx-auto w-1/2">
+      {isClient && account.address ? <><div className="mx-auto w-1/2">
         <h1 className='text-xl'>
           MultiSafe
         </h1>
         <h3>The most secure wallet in crypto.</h3>
       </div>
 
-      <div className="mx-auto w-1/4 mt-5">
+     <div className="mx-auto w-1/4 mt-5">
         <Link href="/create-wallet">
-          <div className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-            <p>Create New Wallet</p>
-          </div>
+          <Button type="primary">
+          Create New Wallet
+          </Button>
         </Link>
       </div>
 
       <div className="mx-auto w-1/4 mt-5">
         <Link href="/my-wallets">
-          <div className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-            <p>My Wallets</p>
-          </div>
+          <Button type="primary">
+          My Wallets
+          </Button>
         </Link>
-      </div>
-
+      </div></> : isClient ? <p className="text-center">Please connect your wallet to continue.</p> : <div className="mx-auto w-1/2 text-center mt-10"><Spin tip="Loading" size="large"><></></Spin></div>}
     </div>
   );
 }
