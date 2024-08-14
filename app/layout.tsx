@@ -18,10 +18,11 @@ const chains = [foundry];
 const config = createConfig(
   getDefaultConfig({
     // @ts-ignore
-    chains, 
+    chains,
     transports: {
       [foundry.id]: http(foundry.rpcUrls.default.http[0]), // or your own RPC url
-    }
+    },
+    ssr: true
   })
 );
 
@@ -44,33 +45,33 @@ export default function RootLayout({
         }}
       >
 
-  
+
         <QueryClientProvider client={queryClient}>
-        <WagmiProvider config={config}>
-          <ConnectKitProvider mode="dark">
+          <WagmiProvider config={config}>
+            <ConnectKitProvider mode="dark">
 
-            <ThirdwebProvider
-              clientId="03bf55fe8b1a940b7474a736f1d3fc61" // You can get a client id from dashboard settings
-              activeChain={FoundryChainTestnet}>
-   
-              <body>
-                <div style={{ display: "flex", flexDirection: "column" }}>
-                  <Navbar />
-                  <AntdRegistry>
-    
+              <ThirdwebProvider
+                clientId="03bf55fe8b1a940b7474a736f1d3fc61" // You can get a client id from dashboard settings
+                activeChain={FoundryChainTestnet}>
+
+                <body>
+                  <div style={{ display: "flex", flexDirection: "column" }}>
+                    <Navbar />
+                    <AntdRegistry>
+
                       <div style={{ flexGrow: 1 }}>{children}</div>
-       
-                  </AntdRegistry>
-                  <Footer />
-                </div>
-              </body>
 
-            </ThirdwebProvider>
-  
-          </ConnectKitProvider>
+                    </AntdRegistry>
+                    <Footer />
+                  </div>
+                </body>
+
+              </ThirdwebProvider>
+
+            </ConnectKitProvider>
           </WagmiProvider>
-          </QueryClientProvider>
-    
+        </QueryClientProvider>
+
 
       </ConfigProvider>
 

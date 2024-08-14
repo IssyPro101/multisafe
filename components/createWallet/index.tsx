@@ -8,8 +8,8 @@ import {
 } from 'wagmi'
 import { CONTRACT_ADDRESSES } from '@/app/constants/contract'
 import { ABIS } from '@/app/constants/abis'
-import { Button, message, Space, Input, Upload, Spin, Image } from 'antd';
-import { UploadOutlined } from '@ant-design/icons';
+import { Button, message, Space, Input, Upload, Spin, Image, Tooltip } from 'antd';
+import { UploadOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import { ethers } from 'ethers'
 import { useAccount } from 'wagmi'
 import { useStorageUpload } from '@thirdweb-dev/react';
@@ -72,7 +72,6 @@ export function CreateWallet() {
             });
         }
 
-        console.log(isConfirming);
         if (isPending) {
             messageApi.destroy();
             messageApi.open({
@@ -86,7 +85,7 @@ export function CreateWallet() {
             messageApi.destroy();
             messageApi.open({
                 type: 'success',
-                content: <p>Wallet created. <Link href={`/wallet/${ethers.utils.defaultAbiCoder.decode(['address'], txData.logs[0].topics[2] as string)}`}>Go To Wallet Page</Link></p>,
+                content: <p>Wallet created. <Link href={`/wallet/${ethers.utils.defaultAbiCoder.decode(['address'], txData.logs[0].topics[2] as string)}`}>View New Wallet</Link></p>,
                 duration: 0
             });
         }
@@ -222,7 +221,15 @@ export function CreateWallet() {
     return (
         <main className='text-center mx-auto w-1/2'>
             {contextHolder}
-            <h1 className='text-center text-2xl'>Create New Wallet</h1>
+
+            <div className="flex justify-center">
+                <h1 className='text-center text-2xl'>Create New Wallet</h1>
+                <Tooltip title="Here you can create a new multisig wallet with custom owners by clicking the 'Add Owner' button. You can remove an owner by clicking the 'Remove' button next to a specific owner." className='ml-2 mb-10'>
+                    <QuestionCircleOutlined />
+                </Tooltip>
+            </div>
+
+
             {isClient && account.address ? <Space className="w-1/2" direction="vertical">
 
                 {imagePreview &&
@@ -242,7 +249,7 @@ export function CreateWallet() {
                     }}
                     showUploadList={false}
                 >
-                    <Button icon={<UploadOutlined />}>Select Profile Image</Button>
+                    <Button icon={<UploadOutlined />}>Select Wallet Profile Image</Button>
                 </Upload>
                 {profileImage && <span className="ml-2">{profileImage.name}</span>}
 

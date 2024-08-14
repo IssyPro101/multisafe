@@ -3,13 +3,15 @@ import "@/app/globals.css";
 import { useAccount } from 'wagmi'
 import { useEffect, useState } from "react";
 import { ABIS } from "@/app/constants/abis";
-import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
-import { Button, message, Space, Input, Upload, Spin, DatePicker } from 'antd';
-import { ethers } from 'ethers'
+import { useWriteContract, useWaitForTransactionReceipt, useReadContract } from "wagmi";
+import { Button, message, Space, Input, Upload, Spin, DatePicker, Tooltip } from 'antd';
+import { ethers } from 'ethers';
 import Link from 'next/link';
 import { Divider, Select } from 'antd';
 import Image from 'next/image';
 import { TOKEN_METADATA, TOKEN_LIST } from "@/app/constants/tokens";
+import { getERC20TransferCalldata } from "@/app/utils/getERC20TransferCalldata";
+import { QuestionCircleOutlined } from '@ant-design/icons';
 
 const { Option } = Select;
 
@@ -25,87 +27,29 @@ export function CreateTx({ params }: { params: { address: `0x${string}` } }) {
 
     const account = useAccount();
 
-    const [to, setTo] = useState<string>('');
-    const [value, setValue] = useState<string>('');
-    const [deadline, setDeadline] = useState<string>('');
-    const [data, setData] = useState<string>('');
-    const [isClient, setIsClient] = useState(false);
-    const [messageApi, contextHolder] = message.useMessage();
-
     const [recipient, setRecipient] = useState<string>('');
     const [amount, setAmount] = useState<string>('');
-    const [transferFilled, setTransferFilled] = useState<boolean>();
+    const [deadline, setDeadline] = useState<string>('');
+    const [isClient, setIsClient] = useState(false);
+    const [messageApi, contextHolder] = message.useMessage();
 
     const [selectedToken, setSelectedToken] = useState<string>("");
 
     const handleChange = (value: string) => {
-        console.log(value);
         setSelectedToken(value);
     };
-
-    const fillTransferData = () => {
-
-        if (!ethers.utils.isAddress(recipient)) {
-            messageApi.destroy();
-            messageApi.open({
-                type: 'error',
-                content: 'Invalid token transfer recipient provided.',
-            });
-            return;
-        }
-
-        if (amount === null || amount.match(/^ *$/) !== null) {
-            messageApi.destroy();
-            messageApi.open({
-                type: 'error',
-                content: 'Token transfer amount not specified.',
-            });
-            return;
-        }
-
-        getERC20TransferCalldata();
-        setAmount("");
-        setTransferFilled(true);
-    }
-
-    const unfillTransferData = () => {
-
-        if (!transferFilled) {
-            messageApi.destroy();
-            messageApi.open({
-                type: 'error',
-                content: 'Transfer data not filled.',
-            });
-            return;
-        }
-
-        setTo("");
-        setData("");
-        setTransferFilled(false);
-    }
-
-    const getERC20TransferCalldata = () => {
-
-        // ERC20 transfer function signature
-        const transferFunctionSignature = 'transfer(address,uint256)';
-
-        // Create the interface for the ERC20 transfer function
-        const iface = new ethers.utils.Interface([`function ${transferFunctionSignature}`]);
-
-        // Encode the function call with the provided parameters
-        const calldata = iface.encodeFunctionData('transfer', [recipient, amount]);
-
-        setData(calldata);
-        setTo(TOKEN_METADATA[selectedToken].address);
-        setValue("0");
-
-        return calldata;
-    }
 
     const { data: txData, isLoading: isConfirming, isSuccess: isConfirmed } =
         useWaitForTransactionReceipt({
             hash,
         });
+
+    const { data: name, isLoading: nameIsLoading }: any = useReadContract({
+        abi: ABIS["name"],
+        address: params.address,
+        functionName: "name",
+        args: []
+    })
 
     useEffect(() => {
         if (error) {
@@ -116,7 +60,6 @@ export function CreateTx({ params }: { params: { address: `0x${string}` } }) {
             });
         }
 
-        console.log(isConfirming);
         if (isPending) {
             messageApi.destroy();
             messageApi.open({
@@ -130,7 +73,7 @@ export function CreateTx({ params }: { params: { address: `0x${string}` } }) {
             messageApi.destroy();
             messageApi.open({
                 type: 'success',
-                content: <p>Transaction created. <Link href={`/wallet/${params.address}/pending-txs`}>Go To Transactions Page</Link></p>,
+                content: <p>Transaction created. <Link href={`/wallet/${params.address}/pending-txs`}>View Transactions</Link></p>,
                 duration: 0
             });
         }
@@ -143,15 +86,12 @@ export function CreateTx({ params }: { params: { address: `0x${string}` } }) {
 
     async function submit() {
 
-        console.log(deadline);
-
         var someDate = new Date(deadline);
         const epochDeadline = someDate.getTime();
 
         const date = new Date();
-        console.log(date);
 
-        if (!ethers.utils.isAddress(to)) {
+        if (!ethers.utils.isAddress(recipient)) {
             messageApi.destroy();
             messageApi.open({
                 type: 'error',
@@ -169,135 +109,103 @@ export function CreateTx({ params }: { params: { address: `0x${string}` } }) {
             return;
         }
 
-        if (value === null || value.match(/^ *$/) !== null) {
+        if (amount === null || amount.match(/^ *$/) !== null) {
             messageApi.destroy();
             messageApi.open({
                 type: 'error',
-                content: 'ETH value not specified.',
+                content: 'Transfer amount not specified.',
             });
             return;
         }
+
+        if (!amount.match(/^\d+$/)) {
+            messageApi.destroy();
+            messageApi.open({
+                type: 'error',
+                content: 'Transfer amount is not a number.',
+            });
+            return;            
+        }
+
+        if (Number(amount) < 1) {
+            messageApi.destroy();
+            messageApi.open({
+                type: 'error',
+                content: 'Transfer amount must be at least 1.',
+            });
+            return;
+        }
+
+        const calldata = getERC20TransferCalldata(recipient, amount);
 
         writeContract({
             address: params.address,
             abi: ABIS["submitTransaction"],
             functionName: "submitTransaction",
-            args: [to as string, value, epochDeadline, data as string],
+            args: [TOKEN_METADATA[selectedToken].address, 0, epochDeadline, calldata],
         })
     }
 
     return (
         <main className="text-center mx-auto w-1/2">
             {contextHolder}
-            <h1 className='text-center text-2xl'>Create Transaction</h1>
-            {isClient && account.address ? <Space className="w-1/2" direction="vertical">
-                <Input
-                    placeholder="To"
-                    autoComplete="off"
-                    name="to"
-                    value={to}
-                    onChange={(e) => setTo(e.target.value)}
-                    allowClear
-                    disabled={transferFilled}
-                />
-                <Input
-                    placeholder="Value (in ETH)"
-                    autoComplete="off"
-                    value={value}
-                    onChange={(e) => setValue(e.target.value)}
-                    allowClear
-                    disabled={transferFilled}
-                />
-                <DatePicker
-                    name="deadline"
-                    value={deadline}
-                    onChange={(e) => setDeadline(e)}
-                    placeholder="Expiry date"
-                    allowClear
-                    className="w-full"
-                />
-                <Input
-                    placeholder="Data"
-                    autoComplete="off"
-                    name="data"
-                    value={data}
-                    onChange={(e) => setData(e.target.value)}
-                    allowClear
-                    disabled={transferFilled}
-                />
 
-                <Button
-                    disabled={isPending}
-                    type="primary"
-                    onClick={submit}
-                    className="mt-5"
-                >
-                    Create Transaction
-                </Button>
 
-                <Divider />
-
-                <h1 className='text-center text-xl'>Prefill Form Data for Crypto Transfer</h1>
-
-                <Select
-                    placeholder="Select a crypto token"
-                    onChange={handleChange}
-                >
-                    {TOKEN_LIST.map((name) => {
-                        const token = TOKEN_METADATA[name]
-
-                        return (
-                            <Option key={token.ticker} value={token.ticker}>
-                                <Image
-                                    src={token.logo}
-                                    alt={token.ticker}
-                                    style={{ width: '20px', marginRight: '8px' }}
-                                />
-                                {token.ticker}
-                            </Option>
-                        )
-                    })}
-                </Select>
-
-                <Input
-                    placeholder="Recipient"
-                    autoComplete="off"
-                    name="data"
-                    value={recipient}
-                    onChange={(e) => setRecipient(e.target.value)}
-                    allowClear
-                />
-                <Input
-                    placeholder="Amount"
-                    autoComplete="off"
-                    name="data"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    allowClear
-                />
-
-                <div className="flex mx-auto">
-                    <Button
-                        type="primary"
-                        onClick={fillTransferData}
-                        className="mt-5 mx-auto"
-                    >
-                        Prefill Form Data
-                    </Button>
+            {isClient && !nameIsLoading && account.address ? <><div className="flex justify-center">
+                <h1 className='text-center text-2xl'>Create Outgoing Transaction for {name}</h1>
+                <Tooltip title="Here you can create a new transaction by selecting a cryptocurrency to transfer to a specificed address. Transactions are executable upto the specified expiry date." className='ml-2 mb-10'>
+                    <QuestionCircleOutlined />
+                </Tooltip>
+            </div>
+                <Space className="w-1/2" direction="vertical">
+                    <Select
+                        placeholder="Select a crypto token"
+                        className="w-full"
+                        onChange={handleChange}>
+                        {TOKEN_LIST.map((name) => {
+                            const token = TOKEN_METADATA[name]
+                            return (
+                                <Option key={token.ticker} value={token.ticker}>
+                                    {token.ticker}
+                                </Option>
+                            )
+                        })}
+                    </Select>
+                    <Input
+                        placeholder="To"
+                        autoComplete="off"
+                        name="to"
+                        value={recipient}
+                        onChange={(e) => setRecipient(e.target.value)}
+                        allowClear
+                    />
+                    <Input
+                        placeholder="Amount"
+                        autoComplete="off"
+                        value={amount}
+                        onChange={(e) => setAmount(e.target.value)}
+                        allowClear
+                    />
+                    <DatePicker
+                        name="deadline"
+                        value={deadline}
+                        onChange={(e) => setDeadline(e)}
+                        showTime
+                        placeholder="Expiry date"
+                        className="w-full"
+                    />
 
                     <Button
+                        disabled={isPending}
                         type="primary"
-                        onClick={unfillTransferData}
-                        className="mt-5 mx-auto"
+                        onClick={submit}
+                        className="mt-5"
                     >
-                        Unfill Form Data
+                        Create Transaction
                     </Button>
-                </div>
 
-
-
-            </Space> : isClient ? <p className="text-center">Please connect your wallet to continue.</p> : <div className="mx-auto w-1/2 text-center mt-10"><Spin tip="Loading" size="large"><></></Spin></div>}
+                </Space>
+            </> : isClient ? <p className="text-center">Please connect your wallet to continue.</p> : <div className="mx-auto w-1/2 text-center mt-10"><Spin tip="Loading" size="large"><></></Spin></div>}
         </main>
-
     );
 }

@@ -1,21 +1,39 @@
-
-
 .navbar {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
 	width: 100%;
 	padding: 2rem 4rem 0.8rem 4rem;
-	gap: 2rem;
 	margin-bottom: 4rem;
-}
-
-.navbar a {
+  }
+  
+  .navbar a {
 	color: white;
-}
-
-
-.alchemy_logo{
+  }
+  
+  .navItems {
+	display: flex;
+	gap: 2rem;
+  }
+  
+  .alchemy_logo {
 	width: 6rem;
 	cursor: pointer;
-}
+  }
+
+  .walletButton {
+	background-color: #383838; /* Replace with the ConnectKitButton's background color */
+	color: white;
+	border: none;
+	border-radius: 12px; /* Adjust border radius if needed */
+	padding: 0.5rem 1rem; /* Adjust padding if needed */
+	cursor: pointer;
+	transition: background-color 0.3s ease;
+	margin-right: 5px;
+	font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica, 'Apple Color Emoji',Arial,sans-serif,'Segoe UI Emoji', 'Segoe UI Symbol';
+  }
+  
+  .walletButton:hover {
+	background-color: #2d3748; /* Replace with the ConnectKitButton's hover color */
+  }
+  

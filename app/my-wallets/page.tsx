@@ -6,25 +6,11 @@ import { CONTRACT_ADDRESSES } from '@/app/constants/contract'
 import { useAccount } from 'wagmi'
 import { ABIS } from '@/app/constants/abis'
 import { MediaRenderer } from "@thirdweb-dev/react";
-import { blo } from "blo";
 import { useState, useEffect } from 'react';
-import { Spin, Space, Image } from 'antd';
-
-function AddressIcon({ address }: { address: `0x${string}` }) {
-  return (
-    <Image
-      alt={address}
-      src={blo(address)}
-      style={{
-        width: '100px',
-        height: '100px',
-        borderRadius: '50%',
-        objectFit: 'cover',
-        marginRight: "10px"
-      }}
-    />
-  );
-}
+import { Spin, Space, Image, Tooltip } from 'antd';
+import { Button } from 'antd';
+import { QuestionCircleOutlined } from "@ant-design/icons";
+import { AddressIcon } from '@/components/addressIcon';
 
 export default function MyWallets({ params }: { params: { address: `0x${string}` } }) {
 
@@ -38,6 +24,8 @@ export default function MyWallets({ params }: { params: { address: `0x${string}`
     functionName: "getNumUserWallets",
     args: account.address ? [account.address] : undefined,
   })
+
+  console.log(userWalletsLength);
 
   const { data: wallets } = useReadContracts({
     contracts: !isUserWalletsLengthLoading ? [...Array(Number(userWalletsLength))].map((item, key): any => {
@@ -61,8 +49,6 @@ export default function MyWallets({ params }: { params: { address: `0x${string}`
     }) : []
   })
 
-  console.log(ownerCounts);
-
   const { data: names } = useReadContracts({
     contracts: wallets ? wallets.map((item, key): any => {
       return {
@@ -85,18 +71,29 @@ export default function MyWallets({ params }: { params: { address: `0x${string}`
     }) : []
   })
 
-  console.log(wallets);
-  console.log(names);
-  console.log(images);
-
   useEffect(() => {
     setIsClient(true)
   }, [])
 
   return (
     <main className="text-center">
-      <h1 className='text-center text-2xl'>My Wallets</h1>
+
+      <div className="flex justify-center">
+        <h1 className='text-center text-2xl'>My Wallets</h1>
+        <Tooltip title="Here you can view all the multisig wallets you have created and create new ones." className='ml-2 mb-10'>
+          <QuestionCircleOutlined />
+        </Tooltip>
+      </div>
       {isClient && account.address ? <Space direction="vertical">
+        <div className="mx-auto mt-5">
+          <Link href="/create-wallet">
+            <Button type="primary">
+              Create New Wallet
+            </Button>
+          </Link>
+        </div>
+
+        {!isUserWalletsLengthLoading && (Number(userWalletsLength) === 0) && <p>No wallets found.</p>}
         {wallets && names && images && ownerCounts ? wallets.map((item, key) => {
           return (
             <Link href={`/wallet/${item.result}`}>
@@ -118,6 +115,7 @@ export default function MyWallets({ params }: { params: { address: `0x${string}`
             </Link>
           )
         }) : <></>}
+
       </Space> : isClient ? <p className="text-center">Please connect your wallet to continue.</p> : <div className="mx-auto w-1/2 text-center mt-10"><Spin tip="Loading" size="large"><></></Spin></div>}
     </main>
 
